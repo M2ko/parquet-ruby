@@ -25,6 +25,7 @@ Gem::Specification.new do |spec|
   spec.files =
     Dir[
       "{ext,lib}/**/*",
+      ".cargo/**/*",
       "LICENSE",
       "README.md",
       "Cargo.*",
