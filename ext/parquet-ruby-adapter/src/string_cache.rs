@@ -3,7 +3,9 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use magnus::RString;
 
-static STRING_CACHE: LazyLock<Mutex<HashMap<String, &'static str>>> =
+// Instead of storing static references to Ruby strings (which are no longer guaranteed
+// to be stable in magnus 0.8), we maintain our own cache of Arc<str> for string interning
+static STRING_CACHE: LazyLock<Mutex<HashMap<String, Arc<str>>>> =
     LazyLock::new(|| Mutex::new(HashMap::with_capacity(100)));
 
 /// A cache for interning strings in the Ruby VM to reduce memory usage
@@ -34,32 +36,38 @@ impl StringCache {
         }
 
         // Try to get or create the interned string
-        let result = (|| -> Result<(), String> {
+        let result = (|| -> Result<Arc<str>, String> {
             let mut cache = STRING_CACHE.lock().map_err(|e| e.to_string())?;
 
-            if cache.contains_key(s.as_str()) {
+            if let Some(cached) = cache.get(s.as_str()) {
                 let mut hits = self.hits.lock().map_err(|e| e.to_string())?;
                 *hits += 1;
-            } else {
-                // Create Ruby string and intern it
-                let rstring = RString::new(&s);
-                let interned = rstring.to_interned_str();
-                let static_str = interned.as_str().map_err(|e| e.to_string())?;
-
-                cache.insert(s.clone(), static_str);
-
-                let mut misses = self.misses.lock().map_err(|e| e.to_string())?;
-                *misses += 1;
+                return Ok(Arc::clone(cached));
             }
-            Ok(())
+
+            // Create Ruby string and intern it to deduplicate in Ruby's VM
+            // Note: In magnus 0.8, interned strings are not guaranteed to be permanent,
+            // so we maintain our own cache of Arc<str> for Rust-side interning
+            let rstring = RString::new(&s);
+            let _interned = rstring.to_interned_str();
+
+            let arc_str = Arc::from(s.as_str());
+            cache.insert(s.clone(), Arc::clone(&arc_str));
+
+            let mut misses = self.misses.lock().map_err(|e| e.to_string())?;
+            *misses += 1;
+
+            Ok(arc_str)
         })();
 
         // Log any errors but don't fail - just return the string
-        if let Err(e) = result {
-            eprintln!("String cache error: {}", e);
+        match result {
+            Ok(arc_str) => arc_str,
+            Err(e) => {
+                eprintln!("String cache error: {}", e);
+                Arc::from(s.as_str())
+            }
         }
-
-        Arc::from(s.as_str())
     }
 
     /// Get cache statistics

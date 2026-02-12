@@ -25,6 +25,7 @@ Gem::Specification.new do |spec|
   spec.files =
     Dir[
       "{ext,lib}/**/*",
+      ".cargo/**/*",
       "LICENSE",
       "README.md",
       "Cargo.*",
@@ -36,7 +37,7 @@ Gem::Specification.new do |spec|
   spec.extensions = ["ext/parquet/extconf.rb"]
 
   # needed until rubygems supports Rust support is out of beta
-  spec.add_dependency "rb_sys", "~> 0.9.39"
+  spec.add_dependency "rb_sys", "~> 0.9", ">= 0.9.120"
 
   # Not included in Ruby standard library anymore
   spec.add_dependency "bigdecimal"

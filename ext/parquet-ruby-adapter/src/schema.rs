@@ -635,7 +635,7 @@ pub fn convert_legacy_schema(ruby: &Ruby, schema: RArray) -> Result<RArray, Ruby
              -> std::result::Result<magnus::r_hash::ForEach, MagnusError> {
                 let key_str: String = parse_string_or_symbol(ruby, key)?.ok_or_else(|| {
                     MagnusError::new(
-                        magnus::exception::arg_error(),
+                        ruby.exception_arg_error(),
                         "Nil keys not allowed in schema",
                     )
                 })?;

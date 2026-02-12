@@ -1,5 +1,5 @@
 use magnus::value::ReprValue;
-use magnus::{Error as MagnusError, Value};
+use magnus::{Error as MagnusError, Ruby, Value};
 
 pub struct RubyLogger {
     logger: Option<Value>,
@@ -11,8 +11,9 @@ impl RubyLogger {
         if let Some(ref log) = logger {
             for method in &["debug", "info", "warn", "error"] {
                 if !log.respond_to(*method, false)? {
+                    let ruby = unsafe { Ruby::get_unchecked() };
                     return Err(MagnusError::new(
-                        magnus::exception::arg_error(),
+                        ruby.exception_arg_error(),
                         format!("Logger must respond to {}", method),
                     ));
                 }

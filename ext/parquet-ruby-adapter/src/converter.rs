@@ -1346,9 +1346,13 @@ impl RubyValueConverter {
 
         let mut record = IndexMap::new();
 
+        let ruby = Ruby::get().map_err(|_| {
+            ParquetError::Conversion("Failed to get Ruby runtime".to_string())
+        })?;
+
         for field in fields {
             let field_name = field.name();
-            let ruby_key = Symbol::new(field_name);
+            let ruby_key = ruby.to_symbol(field_name);
 
             // Try symbol key first, then string key
             let field_value = if let Some(val) = hash.get(ruby_key) {
@@ -1357,12 +1361,7 @@ impl RubyValueConverter {
                 val
             } else {
                 // Field not found, use null
-                Ruby::get()
-                    .map_err(|_| {
-                        ParquetError::Conversion("Failed to get Ruby runtime".to_string())
-                    })?
-                    .qnil()
-                    .as_value()
+                ruby.qnil().as_value()
             };
 
             let converted = self.convert_with_schema_hint(field_value, field)?;
@@ -1541,7 +1540,7 @@ pub fn parquet_to_ruby(value: ParquetValue) -> Result<Value> {
                     (
                         secs,
                         nsec,
-                        Symbol::new("nanosecond"),
+                        ruby.to_symbol("nanosecond"),
                         kwargs!("in" => "UTC"),
                     ),
                 )
@@ -1583,7 +1582,7 @@ pub fn parquet_to_ruby(value: ParquetValue) -> Result<Value> {
                     (
                         secs,
                         nsec,
-                        Symbol::new("nanosecond"),
+                        ruby.to_symbol("nanosecond"),
                         kwargs!("in" => "UTC"),
                     ),
                 )
