@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "rb_sys", "~> 0.9.56"
+gem "rb_sys", "~> 0.9", ">= 0.9.120"
 gem "rake"
 gem "bigdecimal"
 
