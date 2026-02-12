@@ -56,7 +56,7 @@ impl StringCache {
 
             let mut misses = self.misses.lock().map_err(|e| e.to_string())?;
             *misses += 1;
-            
+
             Ok(arc_str)
         })();
 
