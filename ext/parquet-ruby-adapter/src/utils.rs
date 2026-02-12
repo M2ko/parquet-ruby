@@ -71,10 +71,13 @@ pub fn parse_compression(compression: Option<String>) -> Result<Compression, Mag
         Some("zstd") => Ok(Compression::ZSTD(parquet::basic::ZstdLevel::default())),
         Some("brotli") => Ok(Compression::BROTLI(parquet::basic::BrotliLevel::default())),
         None => Ok(Compression::SNAPPY), // Default to SNAPPY
-        Some(other) => Err(MagnusError::new(
-            magnus::exception::arg_error(),
-            format!("Invalid compression option: '{}'. Valid options are: none, snappy, gzip, lz4, zstd, brotli", other),
-        )),
+        Some(other) => {
+            let ruby = unsafe { Ruby::get_unchecked() };
+            Err(MagnusError::new(
+                ruby.exception_arg_error(),
+                format!("Invalid compression option: '{}'. Valid options are: none, snappy, gzip, lz4, zstd, brotli", other),
+            ))
+        }
     }
 }
 
@@ -133,7 +136,7 @@ pub fn parse_string_or_symbol(ruby: &Ruby, value: Value) -> Result<Option<String
         Ok(Some(stringed))
     } else {
         Err(MagnusError::new(
-            magnus::exception::type_error(),
+            ruby.exception_type_error(),
             "Value must be a String or Symbol",
         ))
     }

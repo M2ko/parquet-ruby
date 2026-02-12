@@ -90,11 +90,14 @@ impl From<RubyAdapterError> for MagnusError {
                 _ => MagnusError::new(ruby.exception_runtime_error(), err.to_string()),
             },
             Err(_) => {
-                // Fallback if we can't get Ruby runtime
-                MagnusError::new(
-                    magnus::exception::runtime_error(),
-                    format!("Failed to get Ruby runtime: {}", err),
-                )
+                // Fallback if we can't get Ruby runtime - use get_unchecked since we're in a Ruby context
+                unsafe {
+                    let ruby = Ruby::get_unchecked();
+                    MagnusError::new(
+                        ruby.exception_runtime_error(),
+                        format!("Failed to get Ruby runtime: {}", err),
+                    )
+                }
             }
         }
     }

@@ -55,15 +55,16 @@ pub fn create_writer(
 
 /// Finalize the writer and copy temp file to IO if needed
 pub fn finalize_writer(writer_output: WriterOutput) -> Result<(), MagnusError> {
+    let ruby = unsafe { Ruby::get_unchecked() };
     match writer_output {
         WriterOutput::File(writer) => writer
             .close()
-            .map_err(|e| MagnusError::new(magnus::exception::runtime_error(), e.to_string())),
+            .map_err(|e| MagnusError::new(ruby.exception_runtime_error(), e.to_string())),
         WriterOutput::TempFile(writer, temp_file, io_object) => {
             // Close the writer first
             writer
                 .close()
-                .map_err(|e| MagnusError::new(magnus::exception::runtime_error(), e.to_string()))?;
+                .map_err(|e| MagnusError::new(ruby.exception_runtime_error(), e.to_string()))?;
 
             // Copy temp file to IO object
             copy_temp_file_to_io(temp_file, io_object)
@@ -73,9 +74,10 @@ pub fn finalize_writer(writer_output: WriterOutput) -> Result<(), MagnusError> {
 
 /// Copy temporary file contents to Ruby IO object
 fn copy_temp_file_to_io(temp_file: NamedTempFile, io_object: Value) -> Result<(), MagnusError> {
+    let ruby = unsafe { Ruby::get_unchecked() };
     let file = temp_file.reopen().map_err(|e| {
         MagnusError::new(
-            magnus::exception::runtime_error(),
+            ruby.exception_runtime_error(),
             format!("Failed to reopen temporary file: {}", e),
         )
     })?;
@@ -86,14 +88,14 @@ fn copy_temp_file_to_io(temp_file: NamedTempFile, io_object: Value) -> Result<()
 
     std::io::copy(&mut buf_reader, &mut buf_writer).map_err(|e| {
         MagnusError::new(
-            magnus::exception::runtime_error(),
+            ruby.exception_runtime_error(),
             format!("Failed to copy temp file to IO object: {}", e),
         )
     })?;
 
     buf_writer.flush().map_err(|e| {
         MagnusError::new(
-            magnus::exception::runtime_error(),
+            ruby.exception_runtime_error(),
             format!("Failed to flush IO object: {}", e),
         )
     })?;
